@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simulador 3D: deformación longitudinal y transversal</title>
+<style>
+:root{--bg:#eef0f3;--panel:#fff;--ink:#1f2430;--mute:#5d6472;--line:#d3d8e0;--acc:#1d6fa5;--ten:#c0392b;--com:#1f7a4d;--view:#dfe8f0;--warn:#a65b00;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171a21;--panel:#232733;--ink:#eceef2;--mute:#a0a7b6;--line:#3a4050;--acc:#6bb6e6;--ten:#f08a80;--com:#6cc58f;--view:#2a303d;--warn:#f0b35c}}
+:root[data-theme="dark"]{--bg:#171a21;--panel:#232733;--ink:#eceef2;--mute:#a0a7b6;--line:#3a4050;--acc:#6bb6e6;--ten:#f08a80;--com:#6cc58f;--view:#2a303d;--warn:#f0b35c}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1150px;margin:0 auto;padding:14px;display:grid;grid-template-columns:1fr 360px;gap:14px;align-items:start}
+h1{font-size:1.35rem;margin:0 0 4px}
+.sub{margin:0 0 10px;color:var(--mute);font-size:.92rem}
+#view{position:relative;background:var(--view);border:1px solid var(--line);border-radius:10px;height:min(72vh,640px);min-height:340px;overflow:hidden}
+#view canvas{display:block;width:100%;height:100%}
+#tag{position:absolute;left:10px;top:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:.9rem}
+#hint{position:absolute;right:10px;bottom:8px;font-size:.78rem;color:var(--mute)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+.card h2{font-size:1rem;margin:0 0 8px}
+label{display:block;font-size:.88rem;color:var(--mute);margin:8px 0 3px}
+select,input[type=number]{width:100%;font:inherit;padding:7px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink)}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.seg{display:flex;gap:6px}.seg button{flex:1;font:inherit;padding:8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:#fff}
+:root:not([data-theme="light"]) .seg button[aria-pressed=true]{color:#10202a}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.row{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:.92rem}
+.row:last-child{border:0}.row b{font-variant-numeric:tabular-nums;text-align:right}
+.fm{color:var(--mute);font-size:.82rem;display:block}
+.pos{color:var(--ten)}.neg{color:var(--com)}
+#warn{display:none;margin-top:8px;padding:8px 10px;border-left:4px solid var(--warn);background:var(--bg);font-size:.88rem}
+.note{font-size:.8rem;color:var(--mute);margin:6px 0 0}
+@media (max-width:860px){main{grid-template-columns:1fr}#view{height:56vh}}
+</style>
+</head>
+<body>
+<main>
+<section>
+<h1>Deformación longitudinal y transversal de una barra</h1>
+<p class="sub">Al estirar una barra se alarga y se adelgaza; al comprimirla se acorta y se ensancha. La malla dibujada sobre la barra muestra el cambio. Arrastra para rotar la vista.</p>
+<div id="view"><div id="tag"></div><div id="hint">Esquema no a escala · deformación exagerada</div></div>
+</section>
+<aside>
+<div class="card">
+<h2>Condiciones</h2>
+<label for="mat">Material</label>
+<select id="mat"></select>
+<label>Sección transversal</label>
+<div class="seg" id="secSeg"><button data-v="c" aria-pressed="true">Circular</button><button data-v="q" aria-pressed="false">Cuadrada</button></div>
+<label>Tipo de carga</label>
+<div class="seg" id="modeSeg"><button data-v="t" aria-pressed="true">Tensión</button><button data-v="k" aria-pressed="false">Compresión</button></div>
+<label for="F">Fuerza axial F: <b id="Fv"></b> kN</label>
+<input type="range" id="F" min="0" max="150" step="1" value="40">
+<label for="L0">Longitud inicial L₀ (m)</label>
+<input type="number" id="L0" value="2" min="0.1" step="0.1">
+<label for="D0" id="D0l">Diámetro inicial d₀ (mm)</label>
+<input type="number" id="D0" value="20" min="1" step="1">
+<label for="K">Exageración visual: ×<b id="Kv"></b></label>
+<input type="range" id="K" min="1" max="3000" step="1" value="150">
+<div id="warn"></div>
+</div>
+<div class="card" id="res"></div>
+</aside>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+var MAT={acero:{n:"Acero A-36",E:200,nu:.32,sy:250,c:0x9aa3ad},alu:{n:"Aluminio 2014-T6",E:75,nu:.35,sy:414,c:0xd5dbe1},cobre:{n:"Cobre",E:103,nu:.34,sy:70,c:0xd0834d},resina:{n:"Resina poliestérica",E:3.22,nu:.4,sy:32,c:0xe6b64f}};
+var $=function(i){return document.getElementById(i)};
+var st={m:"acero",s:"c",t:"t"};
+var sel=$("mat");for(var k in MAT){var o=document.createElement("option");o.value=k;o.textContent=MAT[k].n;sel.appendChild(o)}
+function f(x,d){return x.toLocaleString("es",{maximumFractionDigits:d,minimumFractionDigits:0})}
+/* ---- 3D ---- */
+var view=$("view"),scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(40,1,.1,100);
+cam.position.set(6,3.6,8.5);
+var rd=new THREE.WebGLRenderer({antialias:true,alpha:true});rd.setPixelRatio(Math.min(devicePixelRatio,2));view.appendChild(rd.domElement);
+var ctl=new THREE.OrbitControls(cam,rd.domElement);ctl.target.set(0,2.2,0);ctl.enableDamping=true;ctl.update();
+scene.add(new THREE.AmbientLight(0xffffff,.7));
+var dl=new THREE.DirectionalLight(0xffffff,.8);dl.position.set(5,8,6);scene.add(dl);
+var plateM=new THREE.MeshStandardMaterial({color:0x58606c,metalness:.3,roughness:.6});
+var base=new THREE.Mesh(new THREE.BoxGeometry(3,.3,3),plateM);base.position.y=-.15;scene.add(base);
+var topP=new THREE.Mesh(new THREE.BoxGeometry(2.6,.25,2.6),plateM);scene.add(topP);
+var tc=document.createElement("canvas");tc.width=tc.height=64;var cx=tc.getContext("2d");cx.fillStyle="#fff";cx.fillRect(0,0,64,64);cx.strokeStyle="#334";cx.lineWidth=5;cx.strokeRect(0,0,64,64);
+var tex=new THREE.CanvasTexture(tc);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(4,10);
+var bar,ghost,barMat=new THREE.MeshStandardMaterial({map:tex,metalness:.2,roughness:.55});
+var ghostMat=new THREE.MeshBasicMaterial({color:0x888888,wireframe:true,transparent:true,opacity:.55});
+function geo(){var g=st.s==="c"?new THREE.CylinderGeometry(.5,.5,4,48,1):new THREE.BoxGeometry(1,4,1);g.translate(0,2,0);return g}
+function build(){if(bar){scene.remove(bar);scene.remove(ghost)}
+ var g=geo();bar=new THREE.Mesh(g,barMat);ghost=new THREE.Mesh(g,ghostMat);scene.add(bar,ghost);
+ tex.repeat.set(st.s==="c"?6:4,10);barMat.color.setHex(MAT[st.m].c)}
+var arr=[];function mk(){arr.forEach(function(a){scene.remove(a)});arr=[];var c=st.t==="t"?0xc0392b:0x1f7a4d;
+ for(var i=0;i<2;i++){var a=new THREE.ArrowHelper(new THREE.Vector3(0,1,0),new THREE.Vector3(),1.4,c,.45,.3);scene.add(a);arr.push(a)}}
+var cur={y:1,x:1},tg={y:1,x:1};
+function frame(){requestAnimationFrame(frame);
+ cur.y+=(tg.y-cur.y)*.14;cur.x+=(tg.x-cur.x)*.14;
+ bar.scale.set(cur.x,cur.y,cur.x);var top=4*cur.y;topP.position.y=top+.125;topP.scale.set(Math.max(1,cur.x*.9),1,Math.max(1,cur.x*.9));
+ var on=$("F").value>0,t=st.t==="t";
+ arr[0].visible=arr[1].visible=on;
+ if(t){arr[0].position.set(0,top+.3,0);arr[0].setDirection(new THREE.Vector3(0,1,0));arr[1].position.set(0,-.3,0);arr[1].setDirection(new THREE.Vector3(0,-1,0))}
+ else{arr[0].position.set(0,top+1.8,0);arr[0].setDirection(new THREE.Vector3(0,-1,0));arr[1].position.set(0,-1.8,0);arr[1].setDirection(new THREE.Vector3(0,1,0))}
+ ctl.update();rd.render(scene,cam)}
+function size(){var w=view.clientWidth,h=view.clientHeight;rd.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
+new ResizeObserver(size).observe(view);size();
+/* ---- cálculo ---- */
+function calc(){
+ var M=MAT[st.m],F=+$("F").value,L0=Math.max(+$("L0").value,.01),d0=Math.max(+$("D0").value,.1),K=+$("K").value,sg=st.t==="t"?1:-1;
+ var circ=st.s==="c",A0=circ?Math.PI*d0*d0/4:d0*d0;           /* mm² */
+ var sig=sg*F*1000/A0;                                         /* MPa */
+ var el=sig/(M.E*1000), dl=el*L0*1000;                         /* mm */
+ var et=-M.nu*el, dd=et*d0, df=d0+dd, Af=circ?Math.PI*df*df/4:df*df;
+ $("Fv").textContent=F;$("Kv").textContent=K;
+ $("D0l").textContent=(circ?"Diámetro inicial d₀":"Lado inicial a₀")+" (mm)";
+ tg.y=Math.min(2.2,Math.max(.25,1+K*el));tg.x=Math.min(2,Math.max(.3,1+K*et));
+ var cls=function(v){return v>0?"pos":v<0?"neg":""},nm=circ?"d":"a";
+ $("tag").innerHTML=st.t==="t"?"<b class='pos'>Tensión:</b> se alarga y se adelgaza":"<b class='neg'>Compresión:</b> se acorta y se ensancha";
+ $("res").innerHTML="<h2>Resultados ("+M.n+")</h2>"+
+ r("Área inicial A₀","A₀ = "+(circ?"π·d₀²/4":"a₀²"),f(A0,1)+" mm²")+
+ r("Esfuerzo normal","σ = F / A₀","<span class='"+cls(sig)+"'>"+f(sig,1)+" MPa</span>")+
+ r("Módulo de elasticidad","E",f(M.E,2)+" GPa")+
+ r("Relación de Poisson","ν",f(M.nu,2))+
+ "<div class='row' style='font-weight:600'><span>Longitudinal</span></div>"+
+ r("Deformación unitaria","ε = σ / E","<span class='"+cls(el)+"'>"+f(el*1e6,0)+" µm/m</span>")+
+ r("Alargamiento","δ = ε · L₀","<span class='"+cls(dl)+"'>"+f(dl,3)+" mm</span>")+
+ r("Longitud final","L = L₀ + δ",f(L0*1000+dl,3)+" mm")+
+ "<div class='row' style='font-weight:600'><span>Transversal</span></div>"+
+ r("Deformación unitaria","ε′ = −ν · ε","<span class='"+cls(et)+"'>"+f(et*1e6,0)+" µm/m</span>")+
+ r("Cambio de "+(circ?"diámetro":"lado"),"Δ"+nm+" = ε′ · "+nm+"₀","<span class='"+cls(dd)+"'>"+f(dd*1000,2)+" µm</span>")+
+ r((circ?"Diámetro":"Lado")+" final",nm+" = "+nm+"₀ + Δ"+nm,f(df,4)+" mm")+
+ r("Área final","A = "+(circ?"π·d²/4":"a²")+" ("+f((Af/A0-1)*100,4)+" %)",f(Af,2)+" mm²")+
+ "<p class='note'>Longitud y deformación en el eje de la fuerza; la sección cambia en sentido contrario. Se desprecia pandeo en compresión.</p>";
+ var w=$("warn");
+ if(Math.abs(sig)>M.sy){w.style.display="block";w.textContent="El esfuerzo ("+f(Math.abs(sig),0)+" MPa) supera el esfuerzo de fluencia aproximado de "+M.n+" ("+M.sy+" MPa). Los resultados dejan de ser válidos: la Ley de Hooke solo aplica en el rango elástico."}
+ else w.style.display="none";
+}
+function r(a,b,c){return "<div class='row'><span>"+a+"<span class='fm'>"+b+"</span></span><b>"+c+"</b></div>"}
+function seg(id,key,after){$(id).addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;
+ [].forEach.call($(id).children,function(x){x.setAttribute("aria-pressed",x===b)});st[key]=b.dataset.v;after();calc()})}
+seg("secSeg","s",build);seg("modeSeg","t",mk);
+sel.onchange=function(){st.m=sel.value;barMat.color.setHex(MAT[st.m].c);calc()};
+["F","L0","D0","K"].forEach(function(i){$(i).addEventListener("input",calc)});
+build();mk();calc();frame();
+</script>
+</body>
+</html>

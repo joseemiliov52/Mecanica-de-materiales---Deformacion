@@ -1,0 +1,251 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Mecánica de Materiales</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: banda institucional con logo a la izquierda y pestañas; contenido en un panel central; firma del profesor en el pie, a la derecha. */
+:root{
+  --bg:#EDF1F5;
+  --panel:#FFFFFF;
+  --ink:#0E2238;
+  --muted:#56677A;
+  --line:#D2DBE4;
+  --accent:#B71C2B;
+  --on-accent:#FFFFFF;
+  --band:#0E2238;
+  --on-band:#F4F7FA;
+  --band-muted:#9FB2C6;
+  --soft:#E3EAF1;
+  --font-display:'Archivo','Arial Narrow',system-ui,sans-serif;
+  --font-body:'Public Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0A141F;--panel:#112031;--ink:#E7EEF6;--muted:#97A9BC;--line:#243649;
+    --accent:#FF7280;--on-accent:#2A0509;--band:#07101A;--on-band:#F1F5F9;--band-muted:#8EA3B8;--soft:#18293B;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0A141F;--panel:#112031;--ink:#E7EEF6;--muted:#97A9BC;--line:#243649;
+  --accent:#FF7280;--on-accent:#2A0509;--band:#07101A;--on-band:#F1F5F9;--band-muted:#8EA3B8;--soft:#18293B;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.5}
+.page{min-height:100%;display:flex;flex-direction:column}
+.pad{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.in{max-width:1240px;margin:0 auto}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button{font-family:inherit}
+
+.band{background:var(--band);color:var(--on-band)}
+.brand{display:flex;align-items:center;gap:16px;padding-block:18px 14px}
+.logo{width:68px;height:68px;border-radius:50%;flex:none;display:block;background:#fff}
+h1{margin:0;font:700 clamp(28px,4.6vw,46px)/1 var(--font-display);font-stretch:85%;letter-spacing:.01em;text-transform:uppercase;text-wrap:balance}
+.sub{margin:6px 0 0;font:600 clamp(14px,2vw,17px)/1.2 var(--font-display);font-stretch:90%;letter-spacing:.2em;text-transform:uppercase;color:var(--band-muted)}
+.sub b{color:var(--on-band);font-weight:700}
+nav{overflow-x:auto;scrollbar-width:thin}
+.tabs{display:flex;gap:2px;min-width:max-content}
+.tab{appearance:none;border:0;background:transparent;color:var(--band-muted);padding:12px 16px;font:600 14.5px var(--font-body);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+.tab:hover{color:var(--on-band)}
+.tab[aria-selected="true"]{color:var(--on-band);border-bottom-color:var(--accent)}
+
+main{flex:1;padding-block:22px 28px}
+.view[hidden]{display:none}
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 20px;margin-bottom:14px}
+h2{margin:0;font:700 clamp(22px,3vw,30px)/1.1 var(--font-display);font-stretch:88%;text-wrap:balance}
+.lead{margin:6px 0 0;color:var(--muted);max-width:70ch;font-size:15px}
+
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--panel)}
+.seg button{border:0;border-right:1px solid var(--line);background:transparent;color:var(--ink);padding:9px 14px;font:500 14px var(--font-body);cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;min-width:0}
+.bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 14px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.bar h3{margin:0;font:600 16px/1.3 var(--font-body)}
+.bar p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.acts{display:flex;flex-wrap:wrap;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:8px;font:600 14px var(--font-body);padding:9px 14px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);cursor:pointer;text-decoration:none}
+.btn:hover{border-color:var(--ink)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.pri:hover{filter:brightness(1.06)}
+.btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.frame{display:block;width:100%;height:clamp(560px,84vh,900px);border:0;background:var(--bg);border-radius:0 0 8px 8px}
+.frame.tall{height:clamp(640px,92vh,1000px)}
+
+.link-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;padding:16px 0}
+.link-card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;gap:12px}
+.link-card h3{margin:0;font:600 16px/1.3 var(--font-body)}
+.link-card p{margin:4px 0 0;font-size:13px;color:var(--muted)}
+
+footer{background:var(--band);color:var(--band-muted);padding-block:14px calc(14px + env(safe-area-inset-bottom,0px))}
+.foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 20px;font-size:13.5px}
+.me{font:700 18px var(--font-display);font-stretch:90%;letter-spacing:.03em;color:var(--on-band);margin-left:auto;text-align:right}
+@media (max-width:560px){.logo{width:54px;height:54px}.seg button{padding:9px 11px}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+
+<div class="page">
+  <header class="band">
+    <div class="pad"><div class="in brand">
+      <img class="logo" src="https://thumb.wikimedia.org/wikipedia/commons/thumb/4/41/Logo_UDO.svg/1280px-Logo_UDO.svg.png?utm_source=es.wikipedia.org&utm_campaign=index&utm_content=thumbnail" alt="Escudo de la Universidad de Oriente, Venezuela" width="68" height="68">
+      <div>
+        <h1>Mecánica de Materiales</h1>
+        <p class="sub"><b>Deformación</b> &nbsp;·&nbsp; Universidad de Oriente</p>
+      </div>
+    </div></div>
+    <nav class="pad" aria-label="Secciones"><div class="in"><div class="tabs" role="tablist" id="tabs"></div></div></nav>
+  </header>
+
+  <main class="pad"><div class="in">
+    <section class="view" id="v-inicio" role="tabpanel" aria-label="Escalada de la deformación">
+      <div class="head"><div><h2>Escalada de la deformación</h2><p class="lead">Responde cada pregunta con acierto para subir un nivel de la pared. Si fallas, el viento te sacude, pero no te caes.</p></div></div>
+      <div class="panel"><iframe class="frame" id="f-juego" title="Juego: escalada de la deformación" loading="eager"></iframe></div>
+    </section>
+    <section class="view" id="v-clases" role="tabpanel" aria-label="Video de clases" hidden></section>
+    <section class="view" id="v-ejercicios" role="tabpanel" aria-label="Ejercicios resueltos" hidden></section>
+    <section class="view" id="v-guia" role="tabpanel" aria-label="Guía de clase" hidden></section>
+    <section class="view" id="v-simuladores" role="tabpanel" aria-label="Simuladores" hidden></section>
+  </div></main>
+
+  <footer class="pad"><div class="in foot">
+    <span>Universidad de Oriente · Venezuela</span>
+    <span class="me">MSc. Rubén Vega</span>
+  </div></footer>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s)};
+var ICO_FS='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+var ICO_NEW='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5H5V6h5"/></svg>';
+
+/* ---------- Contenido ---------- */
+var SECTIONS=[
+ {id:'inicio',label:'Inicio'},
+ {id:'clases',label:'Video de clases',title:'Video de clases',lead:'Presentaciones sobre deformación con explicaciones en audio. Haz clic para abrir o descargar desde Google Drive.',items:[
+  {title:'Deformación V2.1',desc:'Presentación interactiva de la primera sesión.',link:'https://docs.google.com/presentation/d/1oSV4tEIWEzlCKW0zoPsl_nlNDaBWJBkq/edit?usp=sharing&ouid=104067655844240968706&rtpof=true&sd=true'},
+  {title:'Deformación V2.2',desc:'Presentación interactiva de la segunda sesión.',link:'https://docs.google.com/presentation/d/1A3Tzy7VSrrpAFfLf2CcPygBB3u_JLiNb/edit?usp=sharing&ouid=104067655844240968706&rtpof=true&sd=true'}
+ ]},
+ {id:'ejercicios',label:'Ejercicios resueltos',title:'Ejercicios resueltos',lead:'Resolución paso a paso de los ejercicios 2.4, 2.5 y 2.6.',items:[
+  {title:'Ejercicio 2.4',desc:'Presentación con solución del Ejercicio 2.4.',link:'https://docs.google.com/presentation/d/1rVBqPtYnMZydHCOFODVsisWerRZDnOCg/edit?usp=sharing&rtpof=true&sd=true'},
+  {title:'Ejercicio 2.5',desc:'Presentación con solución del Ejercicio 2.5.',link:'https://docs.google.com/presentation/d/1zOuORxZmWQjtMGaPRmB7-h-nq6UI2U5K/edit?usp=sharing&ouid=104067655844240968706&rtpof=true&sd=true'},
+  {title:'Ejercicio 2.6',desc:'Presentación con solución del Ejercicio 2.6.',link:'https://docs.google.com/presentation/d/11Y7vaY0bJhwLc3HJhFP5zuNPjwOskjZt/edit?usp=sharing&ouid=104067655844240968706&rtpof=true&sd=true'}
+ ]},
+ {id:'guia',label:'Guía de clase',title:'Guía de clase',lead:'Material del tema 2 y tablas de propiedades de los materiales.',items:[
+  {title:'Tema 2. Deformación',desc:'Guía teórica del tema 2.',link:'https://drive.google.com/file/d/19UDrrY8XmW6y4rSlUqpMvTNBwjvBFayt/view?usp=sharing'},
+  {title:'Tablas de materiales',desc:'Propiedades de materiales seleccionados en ingeniería (hoja de cálculo).',link:'https://docs.google.com/spreadsheets/d/1R4yglh9y9oyGBzMPjnh3BIRi5jHc3a8f/edit?usp=sharing&ouid=104067655844240968706&rtpof=true&sd=true'}
+ ]},
+ {id:'simuladores',label:'Simuladores',title:'Simuladores',lead:'Simuladores interactivos: ensayo de tensión, deformación longitudinal y transversal, y deformación cortante.',items:[
+  {key:'ensayo',label:'Ensayo de tensión',title:'Simulador de ensayo de tensión',desc:'Máquina de ensayos en 3D con la curva esfuerzo–deformación. Elige un material y observa cada fase hasta la fractura.',type:'sim',src:'ensayo.html'},
+  {key:'long',label:'Deformación longitudinal',title:'Deformación longitudinal y transversal',desc:'Barra circular o cuadrada en tensión o compresión.',type:'sim',src:'longitudinal.html',tall:true},
+  {key:'cort',label:'Deformación cortante',title:'Deformación cortante',desc:'Bloque bajo fuerza cortante: el ángulo de π/2 cambia a π/2 − γ.',type:'sim',src:'cortante.html',tall:true}
+ ]}
+];
+
+/* ---------- Componentes ---------- */
+function head(h2,lead,items,onPick){
+  var w=document.createElement('div');w.className='head';
+  var l=document.createElement('div');l.innerHTML='<h2></h2><p class="lead"></p>';
+  l.querySelector('h2').textContent=h2;l.querySelector('p').textContent=lead;w.appendChild(l);
+  var seg=null;
+  if(items && items.length>1 && items[0].type==='sim'){
+    seg=document.createElement('div');seg.className='seg';seg.setAttribute('role','group');seg.setAttribute('aria-label','Elegir contenido');
+    items.forEach(function(it,i){var b=document.createElement('button');b.type='button';b.textContent=it.label;b.setAttribute('aria-pressed',String(i===0));
+      b.addEventListener('click',function(){Array.prototype.forEach.call(seg.children,function(x){x.setAttribute('aria-pressed',String(x===b));});onPick(it);});seg.appendChild(b);});
+    w.appendChild(seg);
+  }
+  return w;
+}
+
+function titleBar(it){
+  var bar=document.createElement('div');bar.className='bar';
+  var t=document.createElement('div');t.innerHTML='<h3></h3><p></p>';t.querySelector('h3').textContent=it.title;
+  var p=t.querySelector('p');if(it.desc)p.textContent=it.desc;else p.remove();
+  var acts=document.createElement('div');acts.className='acts';
+  bar.appendChild(t);bar.appendChild(acts);
+  return {bar:bar,acts:acts};
+}
+
+function buildLinks(s,host){
+  host.innerHTML='';
+  var grid=document.createElement('div');grid.className='link-grid';
+  s.items.forEach(function(it){
+    var card=document.createElement('div');card.className='link-card';
+    card.innerHTML='<div><h3>'+it.title+'</h3><p>'+it.desc+'</p></div>'+
+      '<div><a href="'+it.link+'" target="_blank" rel="noopener" class="btn pri">'+ICO_NEW+'<span>Abrir en Google Drive</span></a></div>';
+    grid.appendChild(card);
+  });
+  host.appendChild(grid);
+}
+
+function buildSim(it,host){
+  host.innerHTML='';
+  var panel=document.createElement('div');panel.className='panel';
+  var tb=titleBar(it);panel.appendChild(tb.bar);
+  var msg=document.createElement('p');msg.className='msg';msg.setAttribute('role','status');
+  var fr=document.createElement('iframe');fr.className='frame'+(it.tall?' tall':'');fr.title=it.title;
+  var fs=document.createElement('button');fs.type='button';fs.className='btn';fs.innerHTML=ICO_FS+'<span>Pantalla completa</span>';
+  fs.addEventListener('click',function(){if(document.fullscreenElement){document.exitFullscreen();}else if(fr.requestFullscreen){fr.requestFullscreen().catch(function(){msg.textContent='Este visor no permite la pantalla completa.';});}else{msg.textContent='Este visor no permite la pantalla completa.';}});
+  var nw=document.createElement('a');nw.className='btn';nw.href=it.src;nw.target='_blank';nw.rel='noopener';nw.innerHTML=ICO_NEW+'<span>Abrir aparte</span>';
+  tb.acts.appendChild(fs);tb.acts.appendChild(nw);
+  panel.appendChild(fr);
+  var foot=document.createElement('div');foot.style.padding='10px 14px';foot.appendChild(msg);panel.appendChild(foot);
+  host.appendChild(panel);fr.src=it.src;fr.dataset.on='1';
+}
+
+function buildSection(s){
+  var el=$('#v-'+s.id);
+  var slot=document.createElement('div');
+  if(s.id==='simuladores'){
+    var h=head(s.title,s.lead,s.items,function(it){buildSim(it,slot);});
+    el.appendChild(h);el.appendChild(slot);
+    buildSim(s.items[0],slot);
+  } else {
+    var h=head(s.title,s.lead);
+    el.appendChild(h);el.appendChild(slot);
+    buildLinks(s,slot);
+  }
+}
+
+/* ---------- Pestañas y rutas ---------- */
+var tabs=$('#tabs'),built={};
+SECTIONS.forEach(function(s){
+  var b=document.createElement('button');b.type='button';b.className='tab';b.id='t-'+s.id;b.setAttribute('role','tab');b.textContent=s.label;
+  b.addEventListener('click',function(){go(s.id,true);});tabs.appendChild(b);
+});
+tabs.addEventListener('keydown',function(e){
+  var k=e.key;if(k!=='ArrowRight'&&k!=='ArrowLeft')return;
+  var i=SECTIONS.findIndex(function(s){return s.id===curId;}),j=(i+(k==='ArrowRight'?1:SECTIONS.length-1))%SECTIONS.length;
+  go(SECTIONS[j].id,true);$('#t-'+SECTIONS[j].id).focus();
+});
+var curId='inicio';
+function go(id,push){
+  if(!SECTIONS.some(function(s){return s.id===id;}))id='inicio';
+  curId=id;
+  SECTIONS.forEach(function(s){
+    var sel=s.id===id;$('#t-'+s.id).setAttribute('aria-selected',String(sel));$('#t-'+s.id).tabIndex=sel?0:-1;
+    $('#v-'+s.id).hidden=!sel;
+  });
+  var sec=SECTIONS.find(function(s){return s.id===id;});
+  if(id!=='inicio'&&!built[id]){built[id]=true;buildSection(sec);}
+  // los simuladores se detienen al salir de su pestaña
+  ['simuladores'].forEach(function(k){var f=$('#v-'+k+' iframe');if(f&&k!==id&&f.dataset.on){f.removeAttribute('src');f.dataset.on='';}});
+  var f2=$('#v-'+id+' iframe');if(f2&&id==='simuladores'&&!f2.dataset.on){var cur=SECTIONS.find(function(s){return s.id===id;});var sel=$('#v-'+id+' .seg [aria-pressed="true"]');var idx=0;if(sel)idx=Array.prototype.indexOf.call(sel.parentNode.children,sel);f2.src=cur.items[idx].src;f2.dataset.on='1';}
+  if(push&&location.hash!=='#'+id){location.hash=id;}
+  try{window.scrollTo(0,0);}catch(e){}
+}
+window.addEventListener('hashchange',function(){go(location.hash.replace('#',''),false);});
+$('#f-juego').src='juego.html';
+go(location.hash.replace('#','')||'inicio',false);
+})();
+</script>
+
+</body></html>

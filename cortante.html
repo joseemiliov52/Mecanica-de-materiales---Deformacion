@@ -1,0 +1,610 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Deformación Cortante</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+/* Layout: escena 3D y vista frontal con los ejes a la izquierda, controles a la derecha. Naranja para la fuerza y el esfuerzo, azul para los ángulos. */
+:root{
+  --bg:#E3E9E5;--panel:#F2F5F3;--ink:#14201C;--muted:#586963;--line:#C3CDC8;
+  --accent:#1B3FA0;--on-accent:#FFFFFF;
+  --force:#C2411A;--angle:#2F6EA5;
+  --paper:#F7FAF4;--grid:#D5E0D2;--grid-major:#B3C6B2;--stage-a:#DCE4E0;--stage-b:#C3CFCA;
+  --font-display:'Barlow Condensed','Arial Narrow',sans-serif;
+  --font-body:'Barlow',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-data:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1412;--panel:#141D1A;--ink:#E4ECE8;--muted:#8EA39B;--line:#26332F;
+    --accent:#8FB0FF;--on-accent:#0A1226;--force:#FF8A5C;--angle:#6FA8DC;
+    --paper:#0F1816;--grid:#1A2924;--grid-major:#2C423B;--stage-a:#0A100E;--stage-b:#1A2723;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1412;--panel:#141D1A;--ink:#E4ECE8;--muted:#8EA39B;--line:#26332F;
+  --accent:#8FB0FF;--on-accent:#0A1226;--force:#FF8A5C;--angle:#6FA8DC;
+  --paper:#0F1816;--grid:#1A2924;--grid-major:#2C423B;--stage-a:#0A100E;--stage-b:#1A2723;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.45;
+  padding-block:20px 36px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.app{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{margin:0;font-family:var(--font-display);font-weight:700;font-size:clamp(30px,4.4vw,44px);line-height:1;letter-spacing:.02em;text-transform:uppercase;text-wrap:balance}
+h2{margin:0;font-family:var(--font-display);font-weight:600;font-size:18px;letter-spacing:.06em;text-transform:uppercase}
+.sub{margin:6px 0 0;color:var(--muted);font-family:var(--font-data);font-size:12.5px}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 24px}
+.note{margin:0;max-width:46ch;color:var(--muted);font-size:13px}
+.layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(310px,1fr);gap:20px;align-items:start}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.card{border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:14px;min-width:0}
+.card-h{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 12px;margin-bottom:10px}
+.lbl{font:500 12px var(--font-display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+#matLbl,#loadNow{text-transform:none;letter-spacing:.02em;font-family:var(--font-body);font-size:12.5px;font-weight:400}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--panel)}
+.seg button{border:0;border-right:1px solid var(--line);background:transparent;color:var(--ink);padding:8px 14px;font:500 13.5px var(--font-body);cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.btn{font:600 14px var(--font-body);padding:9px 14px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);min-width:150px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:500 14px var(--font-body);padding:8px 12px;border:1px solid var(--line);border-radius:4px;background:var(--paper);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+
+.stage{position:relative;height:clamp(380px,56vh,560px);border:1px solid var(--line);border-radius:6px;overflow:hidden;background:linear-gradient(var(--stage-a),var(--stage-b))}
+#scene{display:block;width:100%;height:100%;touch-action:pan-y;cursor:grab}
+#scene:active{cursor:grabbing}
+#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.tag{position:absolute;left:0;top:0;white-space:nowrap;font:500 12.5px var(--font-data);padding:1px 6px;border-radius:3px;background:var(--paper);border:1px solid var(--line);color:var(--ink);will-change:transform}
+.tag.f{border-color:var(--force);color:var(--force)}
+.tag.a{border-color:var(--angle);color:var(--angle)}
+.hint{position:absolute;right:10px;bottom:10px;margin:0;max-width:22ch;text-align:right;font-size:12px;color:var(--muted)}
+.fallback[hidden]{display:none}
+.fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:var(--muted)}
+.cap{margin:8px 0 0;font-size:12.5px;color:var(--muted)}
+
+.row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:baseline;margin-bottom:10px}
+.row label{font-size:14px}
+.row output{font:500 14px var(--font-data);font-variant-numeric:tabular-nums}
+.row input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--accent);margin:2px 0 0}
+.row .h{grid-column:1/-1;font-size:12px;color:var(--muted)}
+.sec{margin:14px 0 8px;padding-top:12px;border-top:1px solid var(--line)}
+.sec:first-child{margin-top:0;padding-top:0;border-top:0}
+.load{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+
+table.res{width:100%;border-collapse:collapse;font-size:14px}
+table.res th,table.res td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;vertical-align:baseline}
+table.res th:first-child{text-align:left;font-weight:500}
+table.res td{font-family:var(--font-data);font-variant-numeric:tabular-nums;white-space:nowrap}
+table.res td small{color:var(--muted);margin-left:4px;font-size:11.5px}
+table.res tr.grp th{text-align:left;font:600 12px var(--font-display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:var(--paper);padding:6px 10px}
+.scroll{overflow-x:auto}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.two canvas{display:block;width:100%;aspect-ratio:4/3;max-width:100%}
+.two h3{margin:0 0 6px;font:600 14px var(--font-body)}
+.steps ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px;font:400 13px var(--font-data)}
+.steps li{padding-left:2px;overflow-wrap:anywhere}
+.steps b{font-weight:600}
+@media (max-width:1000px){.layout{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:560px){.two{grid-template-columns:minmax(0,1fr)}.stage{height:clamp(280px,42vh,360px)}}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div>
+      <h1>Deformación cortante</h1>
+      <p class="sub">Bloque empotrado · fuerza cortante V · ángulo entre ejes π/2 − γ</p>
+    </div>
+    <p class="note">Rango elástico lineal. Los resultados son reales; el desplazamiento del bloque se exagera en las vistas para poder ver el cambio de ángulo.</p>
+  </header>
+
+  <main class="layout">
+    <div class="col">
+      <section class="card" aria-label="Escena 3D">
+        <div class="card-h"><h2>Bloque bajo cortante</h2><span class="lbl" id="loadNow"></span></div>
+        <div class="stage" id="stage">
+          <canvas id="scene" tabindex="0" aria-label="Bloque empotrado en su base con una fuerza cortante paralela a la cara superior. Arrastra para rotar, rueda para acercar."></canvas>
+          <div id="labels"></div>
+          <p class="hint">Arrastra para rotar. Rueda o pellizco para acercar.</p>
+          <p class="fallback" id="fallback" hidden>Este navegador no puede mostrar la vista 3D (WebGL). La vista frontal y los cálculos siguen funcionando.</p>
+        </div>
+        <p class="cap">La silueta transparente es el bloque sin deformar. La fuerza V es paralela a la cara superior, así que la cara se desliza y el bloque pasa de ser un prisma recto a uno oblicuo. Las proporciones se ajustan para que se vea bien.</p>
+      </section>
+
+      <section class="card" aria-label="Vista frontal y ley de Hooke">
+        <div class="two">
+          <div><h3>Vista frontal: los dos ejes</h3><canvas id="chFront" aria-label="Vista frontal con el ángulo entre los dos ejes perpendiculares antes y después de la fuerza cortante"></canvas></div>
+          <div><h3>Esfuerzo cortante contra deformación cortante</h3><canvas id="chHooke" aria-label="Gráfico de esfuerzo cortante contra deformación cortante con pendiente G"></canvas></div>
+        </div>
+        <p class="cap">Izquierda: el cuadrado punteado es el bloque original, con sus ejes a π/2. El relleno es el bloque deformado: el ángulo entre los ejes pasa a θ = π/2 − γ. Derecha: en el rango elástico τ = G γ, y la pendiente es G.</p>
+      </section>
+
+      <section class="card" aria-label="Resultados">
+        <div class="card-h"><h2>Resultados</h2></div>
+        <div class="scroll">
+          <table class="res"><tbody id="resBody"></tbody></table>
+        </div>
+        <p class="cap">Convención: γ es positivo cuando el ángulo entre los dos ejes disminuye. Si inviertes el sentido de V, el ángulo aumenta y γ sale negativo.</p>
+      </section>
+
+      <section class="card" aria-label="Cálculo paso a paso">
+        <div class="card-h"><h2>Cálculo paso a paso</h2><span class="lbl">con los valores actuales</span></div>
+        <div class="steps" id="steps"></div>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="card" aria-label="Controles">
+        <div class="sec"><div class="card-h"><h2>Material</h2><span class="lbl" id="matLbl"></span></div>
+          <div class="chips" id="mats"></div>
+          <div style="height:12px"></div>
+          <div class="row"><label for="sE">Módulo de elasticidad E</label><output id="oE"></output><input type="range" id="sE" min="10" max="400" step="0.1"></div>
+          <div class="row"><label for="sNu">Relación de Poisson ν</label><output id="oNu"></output><input type="range" id="sNu" min="0" max="0.5" step="0.01"></div>
+          <div class="row"><label>Módulo de rigidez G = E / [2 (1 + ν)]</label><output id="oG"></output></div>
+        </div>
+        <div class="sec"><div class="card-h"><h2>Bloque</h2></div>
+          <div class="row"><label for="sA">Ancho a</label><output id="oA"></output><input type="range" id="sA" min="20" max="200" step="1"></div>
+          <div class="row"><label for="sB">Profundidad b</label><output id="oB"></output><input type="range" id="sB" min="20" max="200" step="1"></div>
+          <div class="row"><label for="sH">Altura h</label><output id="oH"></output><input type="range" id="sH" min="20" max="200" step="1"><span class="h" id="hArea"></span></div>
+        </div>
+        <div class="sec"><div class="card-h"><h2>Fuerza cortante</h2></div>
+          <div class="row"><label for="sV">Fuerza V</label><output id="oV"></output><input type="range" id="sV" min="0" max="100" step="0.1"><span class="h" id="hV"></span></div>
+          <div class="row"><label>Sentido de V</label><span></span>
+            <div class="seg" id="dirs" role="group" aria-label="Sentido de la fuerza" style="grid-column:1/-1;justify-self:start">
+              <button type="button" data-d="1" aria-pressed="true">Hacia +x</button>
+              <button type="button" data-d="-1" aria-pressed="false">Hacia −x</button>
+            </div>
+          </div>
+          <div class="load"><button type="button" class="btn primary" id="btnLoad">Quitar fuerza</button></div>
+        </div>
+        <div class="sec"><div class="card-h"><h2>Vista</h2></div>
+          <div class="row"><label for="sK">Exageración de la deformación</label><output id="oK"></output><input type="range" id="sK" min="1" max="500" step="1"><span class="h">Solo afecta las vistas. Con ×1 el ángulo real casi no se ve.</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-h"><h2>Qué observar</h2></div>
+        <ul style="margin:0;padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:6px">
+          <li>Sin fuerza, los ejes forman π/2 = 1.5708 rad. Con V, el ángulo cambia a θ = π/2 − γ.</li>
+          <li>γ depende de τ = V/A y de G. Con el mismo V, un material menos rígido deforma más.</li>
+          <li>Una base ancha reduce τ porque aumenta el área A = a · b. La altura h no cambia γ, pero sí el desplazamiento δ.</li>
+          <li>Cambia ν: G baja si ν sube, así que γ aumenta para el mismo esfuerzo.</li>
+        </ul>
+      </section>
+    </div>
+  </main>
+</div>
+<script>(function(){'use strict';
+/*MODEL-START*/
+const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
+const MATS=[
+  {id:'a36',name:'Acero A-36',E:200,nu:0.32,sy:250},
+  {id:'al',name:'Aluminio 2014-T6',E:73.1,nu:0.35,sy:414},
+  {id:'cu',name:'Cobre recocido',E:110,nu:0.34,sy:70},
+  {id:'ti',name:'Titanio Ti-6Al-4V',E:120,nu:0.36,sy:924}
+];
+const gMod=p=>p.E/(2*(1+p.nu));
+const tauY=p=>p.sy/Math.sqrt(3);
+/* V en kN, a,b,h en mm, E y G en GPa. dir +1: fuerza hacia +x; -1: hacia -x */
+function calcS(p,V,dir){
+  const A=p.a*p.b,G=gMod(p);
+  const tau=dir*V*1000/A;
+  const gamma=tau/(G*1000);
+  const delta=p.h*Math.tan(gamma);
+  return {A:A,G:G,tau:tau,gamma:gamma,gammaDeg:gamma*180/Math.PI,delta:delta,
+    theta:Math.PI/2-gamma,thetaDeg:90-gamma*180/Math.PI,ratio:Math.abs(tau)/tauY(p)};
+}
+function vyKN(p){return tauY(p)*p.a*p.b/1000;}
+const SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻'};
+function sci(x,d){
+  if(x===0||!isFinite(x)) return '0';
+  let e=Math.floor(Math.log10(Math.abs(x))),m=x/Math.pow(10,e);
+  let ms=m.toFixed(d);
+  if(Math.abs(parseFloat(ms))>=10){e+=1;ms=(m/10).toFixed(d);}
+  return ms.replace('-','−')+' × 10'+String(e).split('').map(c=>SUP[c]||c).join('');
+}
+function sg(x,d){return (x<0?'−':'+')+Math.abs(x).toFixed(d);}
+/*MODEL-END*/
+const $=s=>document.querySelector(s);
+const st={p:{a:60,b:60,h:40,E:200,nu:0.32,sy:250},matId:'a36',V:300,dir:1,loaded:true,cur:1,k:200,custom:false};
+const FOV=34,HV=4;
+const signedSci=x=>(x<0?'−':'+')+sci(Math.abs(x),3);
+function setTxt(el,t){if(el._t===t)return;el._t=t;el.textContent=t;}
+function setHtml(el,t){if(el._h===t)return;el._h=t;el.innerHTML=t;}
+const vDec=()=>{const Vy=vyKN(st.p),step=Math.pow(10,Math.floor(Math.log10(Math.max(Vy,1e-6)/200)));return Math.max(0,-Math.floor(Math.log10(step)));};
+
+/* ---------- Controles ---------- */
+function syncAll(){
+  const p=st.p;
+  $('#sE').value=p.E;$('#oE').textContent=p.E.toFixed(1)+' GPa';
+  $('#sNu').value=p.nu;$('#oNu').textContent=p.nu.toFixed(2);
+  $('#oG').textContent=gMod(p).toFixed(2)+' GPa';
+  $('#sA').value=p.a;$('#oA').textContent=p.a.toFixed(0)+' mm';
+  $('#sB').value=p.b;$('#oB').textContent=p.b.toFixed(0)+' mm';
+  $('#sH').value=p.h;$('#oH').textContent=p.h.toFixed(0)+' mm';
+  $('#sK').value=st.k;$('#oK').textContent='×'+st.k;
+  const Vy=vyKN(p),step=Math.pow(10,Math.floor(Math.log10(Math.max(Vy,1e-6)/200))),max=Math.floor(Vy/step)*step;
+  $('#sV').step=String(step);$('#sV').max=String(max);
+  st.V=clamp(st.V,0,max);$('#sV').value=st.V;
+  $('#oV').textContent=st.V.toFixed(vDec())+' kN';
+  $('#hArea').textContent='Área sometida a cortante A = a · b = '+(p.a*p.b).toFixed(0)+' mm²';
+  $('#hV').textContent='Rango elástico hasta τy ≈ 0.577 σy = '+tauY(p).toFixed(0)+' MPa, es decir V = '+Vy.toFixed(Vy<10?2:1)+' kN.';
+  $('#matLbl').textContent=st.custom?'valores propios':'σy = '+p.sy+' MPa';
+  document.querySelectorAll('#mats .chip').forEach(b=>b.setAttribute('aria-pressed',String(!st.custom&&b.dataset.id===st.matId)));
+  document.querySelectorAll('#dirs button').forEach(b=>b.setAttribute('aria-pressed',String(parseInt(b.dataset.d,10)===st.dir)));
+  $('#btnLoad').textContent=st.loaded?'Quitar fuerza':'Aplicar fuerza';
+}
+function buildControls(){
+  $('#mats').innerHTML=MATS.map(m=>'<button type="button" class="chip" data-id="'+m.id+'" aria-pressed="false">'+m.name+'</button>').join('');
+  document.querySelectorAll('#mats .chip').forEach(b=>b.addEventListener('click',()=>{
+    const m=MATS.find(x=>x.id===b.dataset.id);st.matId=m.id;st.custom=false;st.p.E=m.E;st.p.nu=m.nu;st.p.sy=m.sy;syncAll();
+  }));
+  $('#sE').addEventListener('input',e=>{st.p.E=parseFloat(e.target.value);st.custom=true;syncAll();});
+  $('#sNu').addEventListener('input',e=>{st.p.nu=parseFloat(e.target.value);st.custom=true;syncAll();});
+  $('#sA').addEventListener('input',e=>{st.p.a=parseFloat(e.target.value);syncAll();});
+  $('#sB').addEventListener('input',e=>{st.p.b=parseFloat(e.target.value);syncAll();});
+  $('#sH').addEventListener('input',e=>{st.p.h=parseFloat(e.target.value);syncAll();});
+  $('#sV').addEventListener('input',e=>{st.V=parseFloat(e.target.value);$('#oV').textContent=st.V.toFixed(vDec())+' kN';});
+  $('#sK').addEventListener('input',e=>{st.k=parseFloat(e.target.value);$('#oK').textContent='×'+st.k;});
+  $('#btnLoad').addEventListener('click',()=>{st.loaded=!st.loaded;syncAll();});
+  document.querySelectorAll('#dirs button').forEach(b=>b.addEventListener('click',()=>{st.dir=parseInt(b.dataset.d,10);syncAll();}));
+}
+
+/* ---------- Tabla ---------- */
+const ROWS=[
+  ['_a','Esfuerzo y rigidez'],
+  ['A','Área de cortante A = a · b',c=>c.A.toFixed(1),'mm²'],
+  ['tau','Esfuerzo cortante promedio τ = V / A',c=>sg(c.tau,2),'MPa'],
+  ['G','Módulo de rigidez G = E / [2 (1 + ν)]',c=>c.G.toFixed(2),'GPa'],
+  ['ratio','Esfuerzo respecto del límite τ / τy',c=>(c.ratio*100).toFixed(0),'%'],
+  ['_b','Deformación cortante'],
+  ['gamma','Deformación cortante γ = τ / G',c=>signedSci(c.gamma),'rad'],
+  ['gdeg','γ en grados',c=>sg(c.gammaDeg,4),'°'],
+  ['delta','Desplazamiento de la cara superior δ = h tan γ',c=>sg(c.delta,4),'mm'],
+  ['_c','Ángulo entre los dos ejes'],
+  ['th0','Ángulo inicial π/2',()=>(Math.PI/2).toFixed(6),'rad'],
+  ['th','Ángulo final θ = π/2 − γ',c=>c.theta.toFixed(6),'rad'],
+  ['thd','θ en grados',c=>c.thetaDeg.toFixed(4),'°']
+];
+function buildTable(){
+  $('#resBody').innerHTML=ROWS.map(r=>r.length===2?'<tr class="grp"><th colspan="2" scope="colgroup">'+r[1]+'</th></tr>':'<tr><th scope="row">'+r[1]+'</th><td><span id="r_'+r[0]+'"></span><small>'+r[3]+'</small></td></tr>').join('');
+  ROWS.forEach(r=>{if(r.length>2) r.el=$('#r_'+r[0]);});
+}
+
+/* ---------- Colores y escena 3D ---------- */
+let C={};
+function readColors(){
+  const cs=getComputedStyle(document.documentElement),g=n=>cs.getPropertyValue(n).trim();
+  C={ink:g('--ink'),muted:g('--muted'),line:g('--line'),paper:g('--paper'),accent:g('--accent'),force:g('--force'),angle:g('--angle'),grid:g('--grid')};
+  applyTheme();
+}
+let renderer=null,scene=null,camera=null,S3={};
+function applyTheme(){
+  if(!scene) return;
+  S3.cForce.set(C.force);S3.arrowMat.color.copy(S3.cForce);S3.matGrid.color.set(C.ink);
+  S3.matGhostLine.color.set(C.muted);S3.matGhost.color.set(C.muted);S3.arcMat.color.set(C.angle);S3.dimMat.color.set(C.force);S3.rightMat.color.set(C.muted);
+}
+function hatchTexture(){
+  const cv=document.createElement('canvas');cv.width=cv.height=128;
+  const x=cv.getContext('2d');x.fillStyle='#b4bfc5';x.fillRect(0,0,128,128);
+  x.strokeStyle='#5c6a72';x.lineWidth=3;x.beginPath();
+  for(let i=-128;i<256;i+=16){x.moveTo(i,128);x.lineTo(i+128,0);}
+  x.stroke();
+  const t=new THREE.CanvasTexture(cv);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
+}
+function mkLabel(cls,html){const d=document.createElement('div');d.className='tag '+cls;d.innerHTML=html;$('#labels').appendChild(d);return d;}
+function visDims(){
+  const p=st.p;
+  return {W:clamp(HV*p.a/p.h,2.2,8),D:clamp(HV*p.b/p.h,1.6,6)};
+}
+function initScene(){
+  if(typeof THREE==='undefined'){$('#fallback').hidden=false;$('#labels').hidden=true;return;}
+  try{renderer=new THREE.WebGLRenderer({canvas:$('#scene'),antialias:true,alpha:true});}
+  catch(e){renderer=null;$('#fallback').hidden=false;$('#labels').hidden=true;return;}
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  renderer.outputEncoding=THREE.sRGBEncoding;
+  scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(FOV,1,0.1,200);
+  scene.add(new THREE.HemisphereLight(0xffffff,0x7d8c96,0.85));
+  const key=new THREE.DirectionalLight(0xffffff,0.8);key.position.set(5,10,9);scene.add(key);
+  const rim=new THREE.DirectionalLight(0xbcd2ff,0.4);rim.position.set(-6,4,-8);scene.add(rim);
+  S3.cForce=new THREE.Color(0xc2411a);S3.cBase=new THREE.Color(0x8d9aa3);
+  S3.matGrid=new THREE.LineBasicMaterial({color:0x14201c,transparent:true,opacity:0.5});
+  S3.matGhostLine=new THREE.LineBasicMaterial({color:0x586963,transparent:true,opacity:0.85});
+  S3.matGhost=new THREE.MeshBasicMaterial({color:0x586963,transparent:true,opacity:0.1,depthWrite:false});
+  S3.arrowMat=new THREE.MeshStandardMaterial({color:0xc2411a,metalness:0.1,roughness:0.5});
+  S3.arcMat=new THREE.LineBasicMaterial({color:0x2f6ea5});
+  S3.dimMat=new THREE.LineBasicMaterial({color:0xc2411a});
+  S3.rightMat=new THREE.LineBasicMaterial({color:0x586963});
+
+  // base empotrada
+  const ground=new THREE.Mesh(new THREE.BoxGeometry(1,0.5,1),new THREE.MeshStandardMaterial({color:0x3d4850,metalness:0.2,roughness:0.8}));
+  scene.add(ground);S3.ground=ground;
+  const hatchTex=hatchTexture();
+  const hatch=new THREE.Mesh(new THREE.PlaneGeometry(1,0.5),new THREE.MeshBasicMaterial({map:hatchTex}));
+  scene.add(hatch);S3.hatch=hatch;
+  // bloque
+  const box=new THREE.BoxGeometry(1,1,1);box.translate(0,0.5,0);
+  S3.mat=new THREE.MeshStandardMaterial({color:0x8d9aa3,metalness:0.35,roughness:0.45});
+  S3.block=new THREE.Mesh(box,S3.mat);S3.block.matrixAutoUpdate=false;scene.add(S3.block);
+  const pts=[],N=8;
+  const faceLines=(fn)=>{for(let i=0;i<=N;i++){const u=i/N;fn(u);}};
+  // caras frontal y trasera (plano xy), lados (plano zy)
+  [0.503,-0.503].forEach(z=>{
+    for(let i=0;i<=N;i++){const u=i/N;pts.push(-0.5,u,z,0.5,u,z);pts.push(-0.5+u,0,z,-0.5+u,1,z);}
+  });
+  [0.503,-0.503].forEach(x=>{
+    for(let i=0;i<=N;i++){const u=i/N;pts.push(x,u,-0.5,x,u,0.5);pts.push(x,0,-0.5+u,x,1,-0.5+u);}
+  });
+  const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
+  S3.block.add(new THREE.LineSegments(lg,S3.matGrid));
+  // fantasma
+  S3.ghost=new THREE.Mesh(box,S3.matGhost);scene.add(S3.ghost);
+  S3.ghost.add(new THREE.LineSegments(new THREE.EdgesGeometry(box),S3.matGhostLine));
+  // placa superior y flecha
+  S3.plate=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshStandardMaterial({color:0x4b5861,metalness:0.4,roughness:0.5}));
+  scene.add(S3.plate);
+  const shaftG=new THREE.CylinderGeometry(1,1,1,16);shaftG.rotateZ(-Math.PI/2);shaftG.translate(0.5,0,0);
+  const headG=new THREE.ConeGeometry(0.34,0.65,24);headG.rotateZ(-Math.PI/2);headG.translate(0.325,0,0);
+  S3.arrow=new THREE.Group();
+  S3.shaft=new THREE.Mesh(shaftG,S3.arrowMat);S3.head=new THREE.Mesh(headG,S3.arrowMat);
+  S3.arrow.add(S3.shaft);S3.arrow.add(S3.head);scene.add(S3.arrow);
+  // arco del ángulo, marcador de ángulo recto y cota de δ
+  const ag=new THREE.BufferGeometry();ag.setAttribute('position',new THREE.BufferAttribute(new Float32Array(3*40),3));
+  S3.arc=new THREE.Line(ag,S3.arcMat);S3.arc.frustumCulled=false;scene.add(S3.arc);
+  const rg=new THREE.BufferGeometry();rg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(3*6),3));
+  S3.right=new THREE.Line(rg,S3.rightMat);S3.right.frustumCulled=false;scene.add(S3.right);
+  const dg=new THREE.BufferGeometry();dg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(18),3));
+  S3.dim=new THREE.LineSegments(dg,S3.dimMat);S3.dim.frustumCulled=false;scene.add(S3.dim);
+  S3.lab={V:mkLabel('f','V'),th:mkLabel('a','θ'),d:mkLabel('f','δ')};S3.lp={};
+  applyTheme();resizeScene();
+}
+function resizeScene(){
+  if(!renderer) return;
+  const s=$('#stage'),w=s.clientWidth,h=s.clientHeight;
+  if(!w||!h) return;
+  renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+}
+
+/* ---------- Cámara ---------- */
+const cam={az:0.55,el:0.25,zoom:1,R:20};
+const pointers=new Map();let pinch0=0,zoom0=1;
+const sc=$('#scene');
+function pdist(){const a=Array.from(pointers.values());return Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)||1;}
+sc.addEventListener('pointerdown',e=>{pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,t:e.pointerType});try{sc.setPointerCapture(e.pointerId);}catch(_){}if(pointers.size===2){pinch0=pdist();zoom0=cam.zoom;}});
+sc.addEventListener('pointermove',e=>{
+  const q=pointers.get(e.pointerId);if(!q) return;
+  const dx=e.clientX-q.x,dy=e.clientY-q.y;q.x=e.clientX;q.y=e.clientY;
+  if(pointers.size===1){cam.az-=dx*0.008;if(q.t!=='touch')cam.el=clamp(cam.el+dy*0.006,-0.1,1.3);}
+  else if(pointers.size===2){cam.zoom=clamp(zoom0*pinch0/pdist(),0.4,2.2);}
+});
+const endP=e=>pointers.delete(e.pointerId);
+sc.addEventListener('pointerup',endP);sc.addEventListener('pointercancel',endP);
+sc.addEventListener('wheel',e=>{e.preventDefault();cam.zoom=clamp(cam.zoom*Math.exp(e.deltaY*0.001),0.4,2.2);},{passive:false});
+sc.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'){cam.az+=0.08;e.preventDefault();}
+  else if(e.key==='ArrowRight'){cam.az-=0.08;e.preventDefault();}
+  else if(e.key==='ArrowUp'){cam.el=clamp(cam.el+0.05,-0.1,1.3);e.preventDefault();}
+  else if(e.key==='ArrowDown'){cam.el=clamp(cam.el-0.05,-0.1,1.3);e.preventDefault();}
+});
+function camFit(){
+  const V=visDims(),W=sc.clientWidth||1,H=sc.clientHeight||1,t=Math.tan(FOV*Math.PI/360),asp=W/H;
+  const vExt=HV+4.6,hExt=Math.max(V.W,V.D)+7.5;
+  return Math.max(vExt/2/t,hExt/2/(t*asp))*1.05;
+}
+
+/* ---------- Actualización de la escena ---------- */
+function updateScene(c,Vnow){
+  const V=visDims(),W=V.W,D=V.D,p=st.p;
+  const gv=clamp(st.k*c.gamma,-0.9,0.9),t=Math.tan(gv);
+  S3.block.matrix.set(W,t*HV,0,0, 0,HV,0,0, 0,0,D,0, 0,0,0,1);
+  S3.block.matrixWorldNeedsUpdate=true;
+  S3.ghost.scale.set(W,HV,D);
+  S3.mat.color.copy(S3.cBase).lerp(S3.cForce,clamp(c.ratio,0,1)*0.8);
+  const gw=W+3.4,gd=D+3.4;
+  S3.ground.scale.set(gw,1,gd);S3.ground.position.set(0,-0.25,0);
+  S3.hatch.scale.set(gw,1,1);S3.hatch.position.set(0,-0.25,gd/2+0.003);
+  S3.hatch.material.map.repeat.set(Math.max(2,gw/1.2),1);
+  const dv=t*HV,pw=W+0.3,pd=D+0.3;
+  S3.plate.scale.set(pw,0.22,pd);S3.plate.position.set(dv,HV+0.11,0);
+  const fr=clamp(Math.abs(Vnow)/Math.max(vyKN(p),1e-9),0,1),La=1.0+2.4*fr,yA=HV+0.11;
+  S3.arrow.visible=Math.abs(Vnow)>1e-4;
+  S3.shaft.scale.set(La-0.65,0.1,0.1);S3.head.position.x=La-0.65;S3.arrow.position.y=yA;
+  const xe=pw/2+0.14;
+  if(st.dir>0){S3.arrow.position.x=dv-xe-La;S3.arrow.rotation.y=0;S3.lp.V=[dv-xe-La-0.2,yA+0.1,0];}
+  else{S3.arrow.position.x=dv+xe+La;S3.arrow.rotation.y=Math.PI;S3.lp.V=[dv+xe+La+0.2,yA+0.1,0];}
+  // arco del ángulo en la esquina inferior izquierda de la cara frontal
+  const phi=Math.atan2(1,t),ra=1.15,cx=-W/2,cz=D/2+0.03,arr=S3.arc.geometry.attributes.position.array;
+  for(let i=0;i<40;i++){const a=phi*i/39;arr[i*3]=cx+ra*Math.cos(a);arr[i*3+1]=ra*Math.sin(a);arr[i*3+2]=cz;}
+  S3.arc.geometry.attributes.position.needsUpdate=true;
+  const m=0.5,rr=S3.right.geometry.attributes.position.array;
+  [cx+m,0,cz,cx+m,m,cz,cx,m,cz].forEach((v,i)=>{rr[i]=v;});
+  S3.right.geometry.attributes.position.needsUpdate=true;
+  S3.lp.th=[cx+(ra+0.55)*Math.cos(phi/2),(ra+0.55)*Math.sin(phi/2),cz];
+  const dd=S3.dim.geometry.attributes.position.array,yd=HV+0.85,zd=D/2+0.05;
+  [0,yd,zd,dv,yd,zd,0,yd-0.14,zd,0,yd+0.14,zd,dv,yd-0.14,zd,dv,yd+0.14,zd].forEach((v,i)=>{dd[i]=v;});
+  S3.dim.geometry.attributes.position.needsUpdate=true;
+  S3.lp.d=[dv/2,yd+0.5,zd];
+  setHtml(S3.lab.V,'V = '+(st.dir>0?'':'−')+Math.abs(Vnow).toFixed(Math.max(1,vDec()))+' kN');
+  setHtml(S3.lab.th,'θ = '+c.theta.toFixed(5)+' rad');
+  setHtml(S3.lab.d,'δ = '+sg(c.delta,4)+' mm');
+  S3.lab.d.style.display=Math.abs(dv)>0.08?'':'none';
+  cam.ty=HV/2+0.5;
+}
+function placeLabels(){
+  const s=$('#stage'),W=s.clientWidth,H=s.clientHeight,tmp=new THREE.Vector3();
+  ['V','th','d'].forEach(n=>{
+    const el=S3.lab[n],q=S3.lp[n];
+    if(!q||(n==='V'&&!S3.arrow.visible)||(n==='d'&&el.style.display==='none')){el.style.visibility='hidden';return;}
+    tmp.set(q[0],q[1],q[2]).project(camera);
+    if(tmp.z>1){el.style.visibility='hidden';return;}
+    el.style.visibility='visible';
+    el.style.transform='translate('+(tmp.x*0.5*W+W/2).toFixed(1)+'px,'+(-tmp.y*0.5*H+H/2).toFixed(1)+'px) translate(-50%,-50%)';
+  });
+}
+
+/* ---------- Gráficos 2D ---------- */
+function sizeCv(cv){
+  const dpr=Math.min(window.devicePixelRatio||1,2),w=cv.clientWidth,h=cv.clientHeight;
+  if(!w||!h) return null;
+  if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
+  const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+  return {ctx:ctx,w:w,h:h};
+}
+function arrowH(ctx,x0,y0,x1,y1,col,lw){
+  const a=Math.atan2(y1-y0,x1-x0);
+  ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=lw||2;
+  ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x1-9*Math.cos(a-0.4),y1-9*Math.sin(a-0.4));ctx.lineTo(x1-9*Math.cos(a+0.4),y1-9*Math.sin(a+0.4));ctx.closePath();ctx.fill();
+}
+function drawFront(c,Vnow){
+  const cv=$('#chFront'),o=sizeCv(cv);if(!o) return;
+  const {ctx,w,h}=o,p=st.p;
+  const S=Math.min(w*0.32,h*0.42),x0=w/2-S/2,y0=h*0.82;
+  const gv=clamp(st.k*c.gamma,-0.6,0.6),d=Math.tan(gv)*S;
+  const txt=(s,x,y,col,al,f)=>{ctx.font=f||'500 12px "IBM Plex Mono",monospace';ctx.fillStyle=col;ctx.textAlign=al||'left';ctx.textBaseline='middle';ctx.fillText(s,x,y);};
+  // ejes originales
+  ctx.setLineDash([5,4]);ctx.strokeStyle=C.muted;ctx.lineWidth=1.4;
+  ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x0,y0-S*1.22);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x0,y0-S);ctx.lineTo(x0+S,y0-S);ctx.lineTo(x0+S,y0);ctx.stroke();
+  ctx.setLineDash([]);
+  txt('eje y',x0-6,y0-S*1.22-8,C.muted,'center');
+  // bloque deformado
+  ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x0+S,y0);ctx.lineTo(x0+S+d,y0-S);ctx.lineTo(x0+d,y0-S);ctx.closePath();
+  ctx.globalAlpha=0.22;ctx.fillStyle=C.force;ctx.fill();ctx.globalAlpha=1;ctx.lineWidth=2.2;ctx.strokeStyle=C.force;ctx.stroke();
+  // base fija
+  ctx.fillStyle=C.muted;ctx.globalAlpha=0.4;ctx.fillRect(x0-S*0.25,y0,S*1.5,6);ctx.globalAlpha=1;
+  ctx.strokeStyle=C.muted;ctx.lineWidth=1;ctx.beginPath();for(let i=0;i<14;i++){const x=x0-S*0.25+i*S*1.5/13;ctx.moveTo(x,y0+6);ctx.lineTo(x-6,y0+13);}ctx.stroke();
+  // eje x
+  arrowH(ctx,x0-S*0.2,y0,x0+S*1.45,y0,C.ink,1.6);
+  txt('eje x',x0+S*1.45,y0-12,C.ink,'right');
+  // eje y deformado
+  ctx.setLineDash([]);
+  // marcador de ángulo recto
+  const m=Math.min(12,S*0.1);
+  ctx.strokeStyle=C.muted;ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(x0+m,y0);ctx.lineTo(x0+m,y0-m);ctx.lineTo(x0,y0-m);ctx.stroke();
+  // arco del ángulo final θ (entre +x y el eje deformado)
+  const phi=Math.atan2(S,d);
+  ctx.strokeStyle=C.angle;ctx.lineWidth=2.2;
+  ctx.beginPath();ctx.arc(x0,y0,S*0.34,-phi,0,false);ctx.stroke();
+  txt('θ',x0+S*0.34*Math.cos(phi/2)+10,y0-S*0.34*Math.sin(phi/2)-4,C.angle,'left','600 14px Barlow,sans-serif');
+  // arco de γ entre el eje y original y el deformado
+  const a1=-Math.PI/2,a2=-phi;
+  ctx.beginPath();ctx.arc(x0,y0,S*0.62,Math.min(a1,a2),Math.max(a1,a2),false);ctx.stroke();
+  const am=(a1+a2)/2;
+  txt('γ',x0+S*0.62*Math.cos(am)+(d>=0?10:-10),y0+S*0.62*Math.sin(am)-8,C.angle,d>=0?'left':'right','600 14px Barlow,sans-serif');
+  // flecha V sobre la cara superior
+  const ya=y0-S-S*0.16,len=S*0.6,cxT=x0+d+S/2;
+  if(Math.abs(Vnow)>1e-4){
+    if(st.dir>0) arrowH(ctx,cxT-len/2,ya,cxT+len/2,ya,C.force,3);else arrowH(ctx,cxT+len/2,ya,cxT-len/2,ya,C.force,3);
+    txt('V',cxT,ya-12,C.force,'center','600 13px Barlow,sans-serif');
+  }
+  // cota de δ
+  if(Math.abs(d)>3){
+    const yd=y0-S-S*0.36;
+    ctx.strokeStyle=C.force;ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(x0+S/2,yd);ctx.lineTo(x0+S/2+d,yd);
+    ctx.moveTo(x0+S/2,yd-5);ctx.lineTo(x0+S/2,yd+5);ctx.moveTo(x0+S/2+d,yd-5);ctx.lineTo(x0+S/2+d,yd+5);ctx.stroke();
+    txt('δ',x0+S/2+d/2,yd-11,C.force,'center','600 13px Barlow,sans-serif');
+  }
+  // texto inferior
+  txt('θ = π/2 − γ = '+c.theta.toFixed(5)+' rad',w/2,h-14,C.angle,'center','500 12.5px "IBM Plex Mono",monospace');
+  txt('π/2',x0-S*0.22,y0-S*0.12,C.muted,'right','500 12px "IBM Plex Mono",monospace');
+}
+function niceStep(range,target){
+  const raw=range/target,mag=Math.pow(10,Math.floor(Math.log10(raw))),n=raw/mag;
+  return (n<1.5?1:n<3.5?2:n<7.5?5:10)*mag;
+}
+function drawHooke(c){
+  const cv=$('#chHooke'),o=sizeCv(cv);if(!o) return;
+  const {ctx,w,h}=o,p=st.p;
+  const L=48,R=12,T=12,B=34,pw=w-L-R,ph=h-T-B;
+  const G=gMod(p),ty=tauY(p),gy=ty/(G*1000);
+  const xm=gy*1.15*1000,ym=ty*1.15;
+  const px=v=>L+v/xm*pw,py=v=>T+ph-v/ym*ph;
+  ctx.fillStyle=C.paper;ctx.fillRect(L,T,pw,ph);
+  const sx=niceStep(xm,5),sy=niceStep(ym,5);
+  ctx.lineWidth=1;ctx.strokeStyle=C.grid;ctx.beginPath();
+  for(let v=0;v<=xm+1e-9;v+=sx){const x=Math.round(px(v))+0.5;ctx.moveTo(x,T);ctx.lineTo(x,T+ph);}
+  for(let v=0;v<=ym+1e-9;v+=sy){const y=Math.round(py(v))+0.5;ctx.moveTo(L,y);ctx.lineTo(L+pw,y);}
+  ctx.stroke();
+  ctx.strokeStyle=C.ink;ctx.lineWidth=1.2;ctx.strokeRect(L+0.5,T+0.5,pw-1,ph-1);
+  ctx.fillStyle=C.muted;ctx.font='10.5px "IBM Plex Mono",monospace';
+  ctx.textAlign='center';ctx.textBaseline='top';
+  const xd=sx<1?1:0;
+  for(let v=0;v<=xm+1e-9;v+=sx) ctx.fillText(v.toFixed(xd),px(v),T+ph+4);
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  for(let v=0;v<=ym+1e-9;v+=sy) ctx.fillText(String(Math.round(v)),L-5,py(v));
+  ctx.font='500 12px Barlow,sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';
+  ctx.fillStyle=C.muted;ctx.fillText('|γ| (× 10⁻³ rad)',L+pw/2,h-2);
+  ctx.save();ctx.translate(11,T+ph/2);ctx.rotate(-Math.PI/2);ctx.textBaseline='top';ctx.fillText('|τ| (MPa)',0,-3);ctx.restore();
+  // recta elástica hasta τy
+  ctx.strokeStyle=C.ink;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(px(0),py(0));ctx.lineTo(px(gy*1000),py(ty));ctx.stroke();
+  ctx.setLineDash([3,3]);ctx.strokeStyle=C.muted;ctx.beginPath();ctx.moveTo(px(gy*1000),py(ty));ctx.lineTo(px(xm),py(ty));ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle=C.muted;ctx.font='11px "IBM Plex Mono",monospace';ctx.textAlign='left';ctx.textBaseline='bottom';
+  ctx.fillText('τy',px(gy*1000)+6,py(ty)-3);
+  const gx=Math.abs(c.gamma)*1000,ty2=Math.abs(c.tau);
+  ctx.setLineDash([3,3]);ctx.strokeStyle=C.force;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(px(gx),py(0));ctx.lineTo(px(gx),py(ty2));ctx.lineTo(px(0),py(ty2));ctx.stroke();ctx.setLineDash([]);
+  ctx.beginPath();ctx.arc(px(gx),py(ty2),5.5,0,Math.PI*2);ctx.fillStyle=C.force;ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle=C.paper;ctx.stroke();
+  ctx.fillStyle=C.ink;ctx.font='500 12px "IBM Plex Mono",monospace';ctx.textAlign='left';ctx.textBaseline='top';
+  ctx.fillText('pendiente = G = '+G.toFixed(1)+' GPa',L+8,T+6);
+}
+
+/* ---------- Pasos y resultados ---------- */
+function stepsFor(c,Vnow){
+  const p=st.p,Vs=(st.dir<0?'−':'')+Vnow.toFixed(2);
+  const li=[
+    'A = a · b = '+p.a.toFixed(1)+' mm × '+p.b.toFixed(1)+' mm = <b>'+c.A.toFixed(1)+' mm²</b>',
+    'τ = V / A = ('+Vs+' kN × 1000) / '+c.A.toFixed(1)+' mm² = <b>'+sg(c.tau,2)+' MPa</b>',
+    'G = E / [2 (1 + ν)] = '+p.E.toFixed(1)+' GPa / [2 (1 + '+p.nu.toFixed(2)+')] = <b>'+c.G.toFixed(2)+' GPa</b>',
+    'γ = τ / G = '+sg(c.tau,2)+' MPa / '+(c.G*1000).toFixed(0)+' MPa = <b>'+signedSci(c.gamma)+' rad</b>, que son '+sg(c.gammaDeg,4)+'°',
+    'δ = h tan γ = '+p.h.toFixed(1)+' mm × tan('+signedSci(c.gamma)+') = <b>'+sg(c.delta,4)+' mm</b>',
+    'Ángulo inicial entre los ejes = π/2 = <b>'+(Math.PI/2).toFixed(6)+' rad</b> (90°)',
+    'θ = π/2 − γ = '+(Math.PI/2).toFixed(6)+' − ('+signedSci(c.gamma)+') = <b>'+c.theta.toFixed(6)+' rad</b> ('+c.thetaDeg.toFixed(4)+'°)'
+  ];
+  return '<ol>'+li.map(x=>'<li>'+x+'</li>').join('')+'</ol>';
+}
+
+/* ---------- Bucle ---------- */
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000);last=now;
+  const target=st.loaded?1:0;
+  st.cur+=(target-st.cur)*(1-Math.exp(-dt*4));
+  if(Math.abs(target-st.cur)<0.0004) st.cur=target;
+  const Vnow=st.V*st.cur,c=calcS(st.p,Vnow,st.dir);
+  ROWS.forEach(r=>{if(r.length>2) setTxt(r.el,r[2](c));});
+  setTxt($('#loadNow'),'V aplicada = '+Vnow.toFixed(vDec())+' kN');
+  setHtml($('#steps'),stepsFor(c,Vnow));
+  if(renderer){
+    updateScene(c,Vnow);
+    const k=1-Math.exp(-dt*6);cam.R+=(camFit()*cam.zoom-cam.R)*k;
+    camera.position.set(cam.R*Math.sin(cam.az)*Math.cos(cam.el),cam.ty+cam.R*Math.sin(cam.el),cam.R*Math.cos(cam.az)*Math.cos(cam.el));
+    camera.lookAt(0,cam.ty,0);camera.updateMatrixWorld();
+    placeLabels();renderer.render(scene,camera);
+  }
+  drawFront(c,Vnow);drawHooke(c);
+  requestAnimationFrame(frame);
+}
+function init(){
+  buildControls();buildTable();readColors();initScene();syncAll();
+  cam.ty=HV/2+0.5;
+  if(window.ResizeObserver) new ResizeObserver(resizeScene).observe($('#stage')); else window.addEventListener('resize',resizeScene);
+  if(window.MutationObserver) new MutationObserver(readColors).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  if(window.matchMedia){const mq=window.matchMedia('(prefers-color-scheme: dark)');if(mq.addEventListener)mq.addEventListener('change',readColors);}
+  requestAnimationFrame(frame);
+}
+cam.ty=HV/2+0.5;
+init();
+})();</script></body></html>
+
+</body></html>

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Escalada: Deformación</title>
+<style>
+:root{--bg:#efe7da;--panel:#fbf7f0;--ink:#2a2a33;--mute:#6b6a72;--wall:#b9784a;--wall2:#a46538;--hold:#2f6f8f;--ok:#2e7d4f;--bad:#b3392f;--line:#d9ccb8;--sky:#cfe3ee;
+padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1f26;--panel:#2a2d37;--ink:#eee9df;--mute:#a7a5ad;--wall:#8a5434;--wall2:#774529;--hold:#6fb6d6;--ok:#6cc58f;--bad:#f08a80;--line:#434654;--sky:#2b3a48}}
+:root[data-theme="dark"]{--bg:#1d1f26;--panel:#2a2d37;--ink:#eee9df;--mute:#a7a5ad;--wall:#8a5434;--wall2:#774529;--hold:#6fb6d6;--ok:#6cc58f;--bad:#f08a80;--line:#434654;--sky:#2b3a48}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:17px/1.5 Georgia,"Times New Roman",serif;min-height:100%}
+main{max-width:980px;margin:0 auto;padding:16px;display:grid;grid-template-columns:minmax(200px,300px) 1fr;gap:20px;align-items:start}
+h1{font-size:1.5rem;margin:0 0 2px;line-height:1.2}
+.sub{color:var(--mute);margin:0 0 12px;font-size:.95rem}
+#wallbox{background:var(--sky);border:2px solid var(--line);border-radius:10px;overflow:hidden;position:sticky;top:8px}
+#wallbox svg{display:block;width:100%;height:auto;max-height:86vh}
+.panel{background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:20px}
+.meta{display:flex;justify-content:space-between;color:var(--mute);font-size:.95rem;margin-bottom:10px}
+.q{font-size:1.25rem;line-height:1.35;margin:0 0 16px;font-weight:bold}
+.opts{display:grid;gap:10px}
+.opt{font:inherit;text-align:left;background:var(--bg);color:var(--ink);border:2px solid var(--line);border-radius:8px;padding:11px 14px;cursor:pointer}
+.opt:hover:not(:disabled){border-color:var(--hold)}
+.opt:focus-visible,.btn:focus-visible{outline:3px solid var(--hold);outline-offset:2px}
+.opt.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 18%,var(--panel))}
+.opt.bad{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 16%,var(--panel))}
+.opt:disabled{cursor:default}
+.fb{margin-top:16px;padding:12px 14px;border-left:5px solid var(--line);background:var(--bg);border-radius:0 8px 8px 0}
+.fb.ok{border-color:var(--ok)}.fb.bad{border-color:var(--bad)}
+.fb b{display:block;margin-bottom:2px}
+.btn{font:inherit;font-weight:bold;margin-top:14px;background:var(--hold);color:#fff;border:0;border-radius:8px;padding:11px 22px;cursor:pointer}
+:root:not([data-theme="light"]) .btn{color:#10202a}
+@media (prefers-color-scheme:light){.btn{color:#fff}}
+.end h2{margin:0 0 6px}
+.hidden{display:none}
+/* escalador */
+#climber{transform:translate(100px,550px);transition:transform 1s cubic-bezier(.4,1.4,.5,1)}
+#sway{transform-origin:0 0}
+.wind #sway{animation:flag .35s ease-in-out infinite alternate}
+.wind #arms{animation:flap .2s ease-in-out infinite alternate}
+@keyframes flag{from{transform:rotate(-72deg)}to{transform:rotate(-88deg)}}
+@keyframes flap{from{transform:rotate(-8deg)}to{transform:rotate(10deg)}}
+#gust{opacity:0;transition:opacity .3s}
+.wind #gust{opacity:1}
+.wind #gust line{animation:streak .5s linear infinite}
+@keyframes streak{from{transform:translateX(-30px)}to{transform:translateX(40px)}}
+@media (prefers-reduced-motion:reduce){#climber{transition:none}.wind #sway,.wind #arms,.wind #gust line{animation:none}.wind #sway{transform:rotate(-80deg)}}
+@media (max-width:660px){main{grid-template-columns:1fr}#wallbox{position:static}#wallbox svg{max-height:34vh}}
+</style>
+</head>
+<body>
+<main>
+<section>
+<h1>Escalada de la Deformación</h1>
+<p class="sub">Responde bien y sube un nivel. Si fallas, el viento te sacude, pero no te caes.</p>
+<div id="wallbox">
+<svg id="wall" viewBox="0 0 200 640" role="img" aria-label="Pared de escalada con 10 niveles">
+<rect width="200" height="640" fill="var(--sky)"/>
+<rect x="30" y="40" width="140" height="600" fill="var(--wall)"/>
+<g id="holds"></g>
+<g id="flagtop" transform="translate(100,30)"><line x1="0" y1="0" x2="0" y2="-22" stroke="var(--ink)" stroke-width="2"/><path d="M0 -22 L22 -16 L0 -10Z" fill="var(--ok)"/></g>
+<g id="gust" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" opacity="0"><line x1="2" y1="250" x2="26" y2="250"/><line x1="6" y1="290" x2="30" y2="290"/><line x1="0" y1="330" x2="22" y2="330"/></g>
+<g id="climber">
+<g id="sway">
+<g id="arms"><line x1="-11" y1="0" x2="-4" y2="14" stroke="#e0a97b" stroke-width="5" stroke-linecap="round"/><line x1="11" y1="0" x2="4" y2="14" stroke="#e0a97b" stroke-width="5" stroke-linecap="round"/></g>
+<circle cx="0" cy="12" r="8" fill="#e0a97b"/><path d="M-8 10 Q0 0 8 10Z" fill="#c0392b"/>
+<rect x="-7" y="20" width="14" height="24" rx="5" fill="#c0392b"/>
+<line x1="-4" y1="43" x2="-9" y2="68" stroke="#2c3e50" stroke-width="6" stroke-linecap="round"/>
+<line x1="4" y1="43" x2="9" y2="68" stroke="#2c3e50" stroke-width="6" stroke-linecap="round"/>
+</g></g>
+</svg>
+</div>
+</section>
+<section class="panel" id="panel" aria-live="polite">
+<div class="meta"><span id="prog"></span><span id="score"></span></div>
+<div id="game">
+<p class="q" id="q"></p>
+<div class="opts" id="opts"></div>
+<div id="fb" class="fb hidden"></div>
+<button class="btn hidden" id="next">Continuar</button>
+</div>
+<div id="end" class="end hidden">
+<h2 id="endt"></h2><p id="endp"></p>
+<button class="btn" id="again">Jugar de nuevo</button>
+</div>
+</section>
+</main>
+<script>
+var Q=[
+{q:"El alargamiento o contracción de un segmento de línea por unidad de longitud se llama:",o:["Deformación unitaria cortante","Deformación unitaria normal","Desplazamiento","Resiliencia"],a:1,e:"Se denota con ε y es la relación entre el cambio de longitud y la longitud."},
+{q:"El cambio en el ángulo entre dos segmentos de línea que originalmente eran perpendiculares se llama deformación unitaria cortante. ¿Qué causa en el elemento?",o:["Un cambio de volumen","Un cambio de forma","Un cambio de densidad","Ninguno, solo mide el ángulo"],a:1,e:"Las deformaciones normales causan cambio de volumen; las cortantes causan cambio de forma."},
+{q:"La Ley de Hooke (σ = Eε) es aplicable únicamente en:",o:["Todo el diagrama esfuerzo-deformación","La zona de estricción","El rango elástico","La zona de fluencia"],a:2,e:"E es el módulo de elasticidad o módulo de Young, y la ley solo vale en el rango elástico."},
+{q:"¿En qué zona del diagrama esfuerzo-deformación el material retorna a su forma original al retirar la carga?",o:["Zona de fluencia","Zona de estricción","Zona de endurecimiento por deformación","Zona elástica"],a:3,e:"En la zona elástica la curva es una recta: el esfuerzo es proporcional a la deformación unitaria."},
+{q:"En el esfuerzo último, el área de la probeta comienza a disminuir en una zona localizada. Este fenómeno se llama:",o:["Formación de cuello o estricción","Endurecimiento por deformación","Fluencia","Resiliencia"],a:0,e:"Ocurre por planos de deslizamiento y esfuerzos cortantes; la curva se curva hacia abajo hasta la rotura."},
+{q:"Si dos materiales soportan el mismo esfuerzo y el material B se deforma menos que el A, entonces el material B tiene:",o:["Menor módulo de elasticidad","Mayor ductilidad","Mayor rigidez","Menor rigidez"],a:2,e:"A mayor módulo de elasticidad, mayor rigidez tendrá el material."},
+{q:"La propiedad de absorber energía de deformación por unidad de volumen al deformarse elásticamente, y devolverla al descargar, es:",o:["Tenacidad","Resiliencia","Ductilidad","Fragilidad"],a:1,e:"El módulo de resiliencia Uo es el área bajo la zona elástica de la curva."},
+{q:"La ductilidad puede expresarse mediante:",o:["El módulo de Poisson y el de rigidez","El esfuerzo de fluencia y el esfuerzo máximo","El porcentaje de alargamiento y el porcentaje de reducción de área","El área bajo la zona elástica"],a:2,e:"%l = (lf − l0)/lf · 100 y %a = (Ao − Af)/Ao · 100."},
+{q:"El módulo de tenacidad representa:",o:["El área bajo la zona elástica de la curva","La pendiente de la recta elástica","El esfuerzo de fluencia del material","La energía por unidad de volumen absorbida hasta la fractura"],a:3,e:"Está representado por toda el área bajo la curva esfuerzo-deformación."},
+{q:"La relación de Poisson (ν) es constante dentro del intervalo elástico y se define como:",o:["−(deformación lateral / deformación axial)","Esfuerzo / deformación","Deformación axial / deformación lateral","Esfuerzo cortante / deformación cortante"],a:0,e:"ν = −εx/εy: al alargarse la barra axialmente, se acorta lateralmente."}
+];
+var N=Q.length,i=0,pts=0,locked=false,$=function(id){return document.getElementById(id)};
+var holds=$("holds");
+for(var k=0;k<=10;k++){var y=550-k*48;var c=document.createElementNS("http://www.w3.org/2000/svg","circle");c.setAttribute("cx",k%2?128:72);c.setAttribute("cy",y);c.setAttribute("r",6);c.setAttribute("fill","var(--hold)");holds.appendChild(c)}
+function place(l){$("climber").style.transform="translate(100px,"+(550-l*48)+"px)"}
+function show(){
+ locked=false;var d=Q[i];
+ $("prog").textContent="Pregunta "+(i+1)+" de "+N;$("score").textContent="Nivel "+pts+" de "+N;
+ $("q").textContent=d.q;$("fb").className="fb hidden";$("next").className="btn hidden";
+ var box=$("opts");box.innerHTML="";
+ d.o.forEach(function(t,n){var b=document.createElement("button");b.className="opt";b.textContent=t;b.onclick=function(){pick(n,b)};box.appendChild(b)});
+}
+function pick(n,btn){
+ if(locked)return;locked=true;var d=Q[i],bs=document.querySelectorAll(".opt");
+ bs.forEach(function(b){b.disabled=true});
+ bs[d.a].classList.add("ok");
+ var fb=$("fb");
+ if(n===d.a){pts++;place(pts);fb.className="fb ok";fb.innerHTML="<b>¡Correcto! Subes un nivel.</b>"+d.e}
+ else{btn.classList.add("bad");fb.className="fb bad";fb.innerHTML="<b>¡Soplan fuertes vientos! Te sostienes, pero no subes.</b>La respuesta correcta está marcada en verde. "+d.e;
+  var s=$("wall");s.classList.add("wind");setTimeout(function(){s.classList.remove("wind")},2600)}
+ $("score").textContent="Nivel "+pts+" de "+N;
+ $("next").textContent=i===N-1?"Ver resultado":"Continuar";$("next").className="btn";$("next").focus();
+}
+$("next").onclick=function(){
+ i++;if(i<N){show();return}
+ $("game").className="hidden";$("end").className="end";$("prog").textContent="Fin del juego";
+ $("endt").textContent=pts===N?"¡Llegaste a la cima!":"Llegaste al nivel "+pts+" de "+N;
+ $("endp").textContent=pts===N?"Respondiste las "+N+" preguntas bien. Dominas el tema de deformación.":"Respondiste "+pts+" de "+N+" bien. Repasa la guía y vuelve a intentarlo para llegar a la cima.";
+};
+$("again").onclick=function(){i=0;pts=0;place(0);$("game").className="";$("end").className="end hidden";show()};
+show();
+</script>
+</body>
+</html>
